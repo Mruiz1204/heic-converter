@@ -1,0 +1,7 @@
+[server]
+# Permite subir archivos de hasta 200 MB (ajústalo si lo necesitas)
+maxUploadSize = 200
+
+[theme]
+base = "light"
+primaryColor = "#FF4B4B"
