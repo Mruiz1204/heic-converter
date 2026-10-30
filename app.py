@@ -8,7 +8,7 @@ import zipfile
 from pathlib import Path
 
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Registrar el soporte para HEIC/HEIF en Pillow
 try:
@@ -59,6 +59,16 @@ with col2:
         disabled=(output_format != "JPEG"),
     )
 
+force_horizontal = st.checkbox(
+    "Poner todas las fotos en horizontal (girar las verticales)",
+    value=True,
+    help=(
+        "Primero corrige la orientación según los metadatos de la foto. "
+        "Luego, cualquier imagen vertical (más alta que ancha) se gira 90° "
+        "para dejarla apaisada."
+    ),
+)
+
 
 uploaded_files = st.file_uploader(
     "Selecciona tus archivos HEIC/HEIF",
@@ -67,9 +77,16 @@ uploaded_files = st.file_uploader(
 )
 
 
-def convert_image(file, fmt: str, jpeg_quality: int) -> bytes:
+def convert_image(file, fmt: str, jpeg_quality: int, horizontal: bool) -> bytes:
     """Convierte un archivo subido a los bytes del formato indicado."""
     image = Image.open(file)
+
+    # Aplicar la orientación guardada en EXIF para que la foto quede "derecha".
+    image = ImageOps.exif_transpose(image)
+
+    # Si se pide, girar las verticales para que queden horizontales.
+    if horizontal and image.height > image.width:
+        image = image.rotate(-90, expand=True)
 
     save_kwargs = {}
     if fmt == "JPEG":
@@ -96,7 +113,7 @@ if uploaded_files:
 
     for i, file in enumerate(uploaded_files, start=1):
         try:
-            data = convert_image(file, output_format, quality)
+            data = convert_image(file, output_format, quality, force_horizontal)
             out_name = f"{Path(file.name).stem}.{ext}"
             results.append((out_name, data))
         except Exception as exc:  # noqa: BLE001
